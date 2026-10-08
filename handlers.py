@@ -8,7 +8,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 
 from config import (
-    ADMIN_ID, ENTRY_PRICE, REFERRAL_COMMISSION,
+    ADMIN_ID, ADMIN_IDS, ENTRY_PRICE, REFERRAL_COMMISSION,
     REFERRAL_REGISTRATION_FEE, MIN_WITHDRAWAL,
     MIN_WITHDRAWAL_FREE, DEPOSIT_WALLET, BOT_NAME
 )
@@ -19,13 +19,14 @@ from database import (
     check_bonuses, get_referrals, get_commissions,
     create_withdrawal, get_withdrawals, get_ranking,
     get_global_stats, get_pending_deposits, get_pending_withdrawals,
-    approve_deposit, reject_deposit, approve_withdrawal, reject_withdrawal
+    approve_deposit, reject_deposit, approve_withdrawal, reject_withdrawal,
+    link_wallet_to_user, get_user_by_wallet, create_auto_deposit
 )
 from keyboards import (
     main_menu_keyboard, welcome_keyboard, how_it_works_keyboard,
     deposit_keyboard, after_deposit_keyboard, withdrawal_keyboard,
     back_keyboard, admin_deposit_keyboard, admin_withdrawal_keyboard,
-    admin_panel_keyboard, activate_premium_keyboard
+    admin_panel_keyboard, activate_premium_keyboard, wallet_setup_keyboard
 )
 from messages import (
     welcome_message, how_it_works_message, deposit_message,
@@ -36,6 +37,11 @@ from messages import (
     help_message, new_referral_notification, referral_deposited_notification,
     withdrawal_paid_notification
 )
+
+
+def is_admin(user_id):
+    """Verifica si es admin"""
+    return user_id in ADMIN_IDS
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -70,7 +76,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     
     if referrer_id:
-        # Procesar comisión de $0.05
         referrer = process_referral_registration(user.id)
         
         if referrer:
@@ -107,7 +112,7 @@ async def menu_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def admin_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_user.id != ADMIN_ID:
+    if not is_admin(update.effective_user.id):
         await update.message.reply_text("❌ No tienes permiso.")
         return
     
@@ -176,6 +181,18 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             deposit_message(),
             reply_markup=deposit_keyboard(),
             parse_mode="Markdown"
+        )
+    
+    elif data == "setup_wallet":
+        context.user_data['awaiting_user_wallet'] = True
+        await query.edit_message_text(
+            "🔗 *VINCULA TU WALLET*\n\n"
+            "Envía tu dirección USDT BEP20:\n\n"
+            "⚠️ Debe empezar con `0x`\n"
+            "⚠️ Es la wallet desde donde enviarás los $5\n\n"
+            "📌 *Los depósitos se detectarán automáticamente.*",
+            parse_mode="Markdown",
+            reply_markup=back_keyboard()
         )
     
     elif data == "copy_address":
@@ -307,7 +324,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # ============ ADMIN ============
     
     elif data == "admin_deposits":
-        if user_id != ADMIN_ID:
+        if not is_admin(user_id):
             return
         
         deposits = get_pending_deposits()
@@ -333,7 +350,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
     
     elif data == "admin_withdrawals":
-        if user_id != ADMIN_ID:
+        if not is_admin(user_id):
             return
         
         withdrawals = get_pending_withdrawals()
@@ -361,7 +378,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
     
     elif data == "admin_stats":
-        if user_id != ADMIN_ID:
+        if not is_admin(user_id):
             return
         
         stats = get_global_stats()
@@ -386,7 +403,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
     
     elif data.startswith("approve_dep_"):
-        if user_id != ADMIN_ID:
+        if not is_admin(user_id):
             return
         
         ticket = data.replace("approve_dep_", "")
@@ -434,7 +451,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         print(f"Error: {e}")
     
     elif data.startswith("reject_dep_"):
-        if user_id != ADMIN_ID:
+        if not is_admin(user_id):
             return
         
         ticket = data.replace("reject_dep_", "")
@@ -442,7 +459,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text(f"❌ Depósito {ticket} rechazado.")
     
     elif data.startswith("approve_wd_"):
-        if user_id != ADMIN_ID:
+        if not is_admin(user_id):
             return
         
         ticket = data.replace("approve_wd_", "")
@@ -465,7 +482,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 print(f"Error: {e}")
     
     elif data.startswith("reject_wd_"):
-        if user_id != ADMIN_ID:
+        if not is_admin(user_id):
             return
         
         ticket = data.replace("reject_wd_", "")
@@ -520,6 +537,36 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not user:
         return
     
+    # ============ VINCULAR WALLET ============
+    if context.user_data.get('awaiting_user_wallet'):
+        wallet = text
+        
+        if not (wallet.startswith("0x") and len(wallet) == 42):
+            await update.message.reply_text(
+                "❌ Dirección inválida.\n\nDebe empezar con `0x` y tener 42 caracteres.",
+                parse_mode="Markdown"
+            )
+            return
+        
+        existing = get_user_by_wallet(wallet)
+        if existing and existing['id'] != user_id:
+            await update.message.reply_text("❌ Esta wallet ya está vinculada a otro usuario.")
+            return
+        
+        link_wallet_to_user(user_id, wallet)
+        
+        await update.message.reply_text(
+            f"✅ *WALLET VINCULADA*\n\n"
+            f"`{wallet}`\n\n"
+            f"Ahora envía ${ENTRY_PRICE:.0f} USDT desde esta wallet.\n\n"
+            f"El depósito se detectará automáticamente.",
+            parse_mode="Markdown"
+        )
+        
+        context.user_data['awaiting_user_wallet'] = False
+        return
+    
+    # ============ RETIRO CON WALLET ============
     if context.user_data.get('awaiting_wallet'):
         wallet = text
         
@@ -566,6 +613,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data['withdraw_amount'] = None
         return
     
+    # ============ RETIRO MONTO PERSONALIZADO ============
     if context.user_data.get('awaiting_custom_amount'):
         try:
             amount = float(text)
