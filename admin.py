@@ -3,12 +3,18 @@ Comandos de administración
 """
 from telegram import Update
 from telegram.ext import ContextTypes
-from config import ADMIN_ID
+from config import ADMIN_ID, ADMIN_IDS
 from database import get_user, update_user, get_connection
 
 
+def is_admin(user_id):
+    """Verifica si es admin"""
+    return user_id in ADMIN_IDS
+
+
 async def broadcast_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_user.id != ADMIN_ID:
+    """Envía mensaje masivo"""
+    if not is_admin(update.effective_user.id):
         return
     
     if not context.args:
@@ -45,7 +51,8 @@ async def broadcast_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def ban_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_user.id != ADMIN_ID:
+    """Banea usuario"""
+    if not is_admin(update.effective_user.id):
         return
     
     if not context.args:
@@ -61,7 +68,8 @@ async def ban_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def user_info_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_user.id != ADMIN_ID:
+    """Info de usuario"""
+    if not is_admin(update.effective_user.id):
         return
     
     if not context.args:
@@ -77,6 +85,7 @@ async def user_info_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
         
         plan = "💎 PREMIUM" if user['has_deposited'] else "🎁 GRATIS"
+        wallet = user['wallet_address'] or "No vinculada"
         
         text = f"""
 👤 *INFO DE USUARIO*
@@ -85,6 +94,7 @@ async def user_info_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 🆔 `{user['id']}`
 👤 @{user['username'] or 'N/A'}
+📝 {user['first_name'] or 'N/A'}
 {plan}
 
 💰 Saldo: ${user['balance']:.2f}
@@ -95,6 +105,8 @@ async def user_info_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 👥 Registrados: {user['total_registered']}
 ✅ Activos: {user['total_active']}
 ⏳ Pendientes: {user['total_pending']}
+
+🔗 Wallet: `{wallet}`
 
 ✅ Depositó: {'Sí' if user['has_deposited'] else 'No'}
 🚫 Baneado: {'Sí' if user['is_banned'] else 'No'}
@@ -107,7 +119,8 @@ async def user_info_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def export_db_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_user.id != ADMIN_ID:
+    """Exporta la base de datos"""
+    if not is_admin(update.effective_user.id):
         return
     
     from datetime import datetime
