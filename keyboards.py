@@ -47,11 +47,19 @@ def how_it_works_keyboard():
 
 def deposit_keyboard():
     return InlineKeyboardMarkup([
+        [InlineKeyboardButton("🔗 VINCULAR MI WALLET", callback_data="setup_wallet")],
         [InlineKeyboardButton("📸 YA ENVIÉ EL PAGO", callback_data="sent_payment")],
         [
             InlineKeyboardButton("📋 COPIAR", callback_data="copy_address"),
             InlineKeyboardButton("🔄 VERIFICAR", callback_data="check_payment")
         ],
+        [InlineKeyboardButton("⬅️ ATRÁS", callback_data="back")]
+    ])
+
+
+def wallet_setup_keyboard():
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("🔗 VINCULAR MI WALLET", callback_data="setup_wallet")],
         [InlineKeyboardButton("⬅️ ATRÁS", callback_data="back")]
     ])
 
