@@ -27,6 +27,7 @@ def init_db():
             balance REAL DEFAULT 0,
             referrer_id INTEGER,
             referral_code TEXT UNIQUE,
+            wallet_address TEXT,
             total_registered INTEGER DEFAULT 0,
             total_active INTEGER DEFAULT 0,
             total_pending INTEGER DEFAULT 0,
@@ -233,7 +234,6 @@ def process_referral_registration(user_id):
     
     conn = get_connection()
     
-    # Acreditar $0.05 al referidor
     conn.execute("""
         UPDATE users 
         SET balance = balance + ?,
@@ -243,7 +243,6 @@ def process_referral_registration(user_id):
         WHERE id = ?
     """, (REFERRAL_REGISTRATION_FEE, REFERRAL_REGISTRATION_FEE, referrer['id']))
     
-    # Registrar comisión
     conn.execute("""
         INSERT INTO commissions (user_id, from_user_id, amount, type)
         VALUES (?, ?, ?, 'registration')
@@ -256,7 +255,7 @@ def process_referral_registration(user_id):
 
 
 def process_referral_commission(user_id):
-    """Procesa la comisión de $3.75 cuando un referido deposita"""
+    """Procesa la comisión de $3.00 cuando un referido deposita"""
     user = get_user(user_id)
     
     if not user or not user['referrer_id']:
@@ -267,7 +266,6 @@ def process_referral_commission(user_id):
     if not referrer:
         return
     
-    # Solo pagar $3.75 si el referidor es premium
     if not referrer['has_deposited']:
         return
     
@@ -435,6 +433,42 @@ def get_withdrawals(user_id):
     """, (user_id,)).fetchall()
     conn.close()
     return withdrawals
+
+
+# ============ DEPÓSITOS AUTOMÁTICOS ============
+
+def link_wallet_to_user(user_id, wallet):
+    """Vincula wallet al usuario"""
+    conn = get_connection()
+    conn.execute("UPDATE users SET wallet_address = ? WHERE id = ?", (wallet, user_id))
+    conn.commit()
+    conn.close()
+
+
+def get_user_by_wallet(wallet):
+    """Busca usuario por wallet"""
+    conn = get_connection()
+    user = conn.execute("SELECT * FROM users WHERE wallet_address = ?", (wallet,)).fetchone()
+    conn.close()
+    return user
+
+
+def create_auto_deposit(user_id, amount, tx_hash):
+    """Crea depósito automático"""
+    ticket = f"AUTO-{tx_hash}"
+    
+    conn = get_connection()
+    try:
+        conn.execute("""
+            INSERT INTO deposits (ticket, user_id, amount, status)
+            VALUES (?, ?, ?, 'pending')
+        """, (ticket, user_id, amount))
+        conn.commit()
+        conn.close()
+        return ticket
+    except sqlite3.IntegrityError:
+        conn.close()
+        return None
 
 
 # ============ ESTADÍSTICAS ============
