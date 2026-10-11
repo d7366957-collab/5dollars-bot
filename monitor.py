@@ -1,11 +1,11 @@
 """
-Monitor de depósitos automáticos
+Monitor de depósitos automáticos via RPC directo BSC
 """
 import asyncio
-from blockchain import check_new_deposits, get_tx_url
+from blockchain import check_new_deposits, get_tx_url, check_connection
 from database import (
     get_user_by_wallet, create_auto_deposit,
-    approve_deposit, get_user, give_premium
+    get_user, give_premium, check_bonuses
 )
 from config import (
     ADMIN_ID, ENTRY_PRICE, REFERRAL_COMMISSION,
@@ -25,6 +25,13 @@ async def monitor_deposits(bot):
     """
     print("👁️ Monitor de depósitos iniciado")
     
+    # Verificar conexión a BSC al inicio
+    if not check_connection():
+        print("❌ No se pudo conectar a BSC")
+        print("⚠️ El monitor intentará reconectar")
+    else:
+        print("✅ Conectado a BSC")
+    
     while True:
         try:
             new_deposits = check_new_deposits()
@@ -42,7 +49,7 @@ async def monitor_deposits(bot):
                 
                 if not user:
                     print(f"⚠️ Wallet no vinculada: {wallet}")
-                    # Notificar al admin para que lo gestione
+                    # Notificar al admin
                     try:
                         await bot.send_message(
                             chat_id=ADMIN_ID,
@@ -57,7 +64,7 @@ async def monitor_deposits(bot):
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-_Esta wallet no está vinculada a ningún usuario._
+_Esta wallet no está vinculada._
 _Verifica manualmente._
 """,
                             parse_mode="Markdown"
@@ -135,7 +142,6 @@ _Verifica manualmente._
                             )
                             
                             # Verificar si desbloqueó bono
-                            from database import check_bonuses
                             bonus = check_bonuses(referrer['id'])
                             
                             if bonus:
