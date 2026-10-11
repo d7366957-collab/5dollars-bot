@@ -21,19 +21,18 @@ DEPOSIT_WALLET = os.getenv("DEPOSIT_WALLET", "0x00000000000000000000000000000000
 # ============ PARÁMETROS ============
 BOT_NAME = os.getenv("BOT_NAME", "5DOLLARS")
 ENTRY_PRICE = float(os.getenv("ENTRY_PRICE", "5.0"))
-REFERRAL_COMMISSION = float(os.getenv("REFERRAL_COMMISSION", "3.00"))
+REFERRAL_COMMISSION = float(os.getenv("REFERRAL_COMMISSION", "3.50"))
 REFERRAL_REGISTRATION_FEE = float(os.getenv("REFERRAL_REGISTRATION_FEE", "0.05"))
 MIN_WITHDRAWAL = float(os.getenv("MIN_WITHDRAWAL", "5.0"))
 MIN_WITHDRAWAL_FREE = float(os.getenv("MIN_WITHDRAWAL_FREE", "10.0"))
-BONUS_10_REFERRALS = float(os.getenv("BONUS_10_REFERRALS", "10.0"))
+WITHDRAWAL_FEE = float(os.getenv("WITHDRAWAL_FEE", "0.0"))
 
-# ============ BONOS ESCALONADOS ============
+# ============ BONOS ESCALONADOS (solo premium) ============
 BONUSES = {
     10: 10.0,
-    50: 25.0,
-    100: 50.0,
-    500: 250.0,
-    1000: 500.0,
+    30: 30.0,
+    50: 50.0,
+    100: 100.0,
 }
 
 # ============ BASE DE DATOS ============
@@ -57,7 +56,7 @@ if not BSCSCAN_API_KEY:
 
 print(f"✅ Configuración cargada")
 print(f"💰 Entrada: ${ENTRY_PRICE}")
-print(f"💸 Comisión depósito: ${REFERRAL_COMMISSION}")
+print(f"💸 Comisión premium: ${REFERRAL_COMMISSION}")
 print(f"💸 Comisión registro: ${REFERRAL_REGISTRATION_FEE}")
 print(f"📉 Mínimo retiro premium: ${MIN_WITHDRAWAL}")
 print(f"📉 Mínimo retiro gratis: ${MIN_WITHDRAWAL_FREE}")
