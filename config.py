@@ -38,11 +38,19 @@ BONUSES = {
 # ============ BASE DE DATOS ============
 DATABASE_PATH = os.getenv("DATABASE_PATH", "bot.db")
 
-# ============ ETHERSCAN V2 (BSC) ============
-BSCSCAN_API_KEY = os.getenv("BSCSCAN_API_KEY", "")
-BSCSCAN_API_URL = "https://api.etherscan.io/v2/api"
+# ============ BSC RPC NODES (sin API key) ============
+BSC_NODES = [
+    "https://bsc-dataseed.binance.org",
+    "https://bsc-dataseed1.defibit.io",
+    "https://bsc-dataseed1.ninicoin.io",
+    "https://rpc.ankr.com/bsc",
+]
+
+# Contrato USDT BEP20
 USDT_CONTRACT = "0x55d398326f99059fF775485246999027B3197955"
-BSC_CHAIN_ID = "56"
+
+# Chain ID de BSC
+BSC_CHAIN_ID = 56
 
 # ============ VALIDACIONES ============
 if not BOT_TOKEN:
@@ -51,9 +59,6 @@ if not BOT_TOKEN:
 if ADMIN_ID == 0:
     raise ValueError("❌ ADMIN_ID no está configurado en .env")
 
-if not BSCSCAN_API_KEY:
-    print("⚠️ BSCSCAN_API_KEY no configurada - depósitos automáticos desactivados")
-
 print(f"✅ Configuración cargada")
 print(f"💰 Entrada: ${ENTRY_PRICE}")
 print(f"💸 Comisión premium: ${REFERRAL_COMMISSION}")
@@ -61,3 +66,4 @@ print(f"💸 Comisión registro: ${REFERRAL_REGISTRATION_FEE}")
 print(f"📉 Mínimo retiro premium: ${MIN_WITHDRAWAL}")
 print(f"📉 Mínimo retiro gratis: ${MIN_WITHDRAWAL_FREE}")
 print(f"🔑 Admins configurados: {len(ADMIN_IDS)}")
+print(f"🌐 Nodos BSC: {len(BSC_NODES)}")
