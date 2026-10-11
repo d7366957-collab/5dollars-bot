@@ -8,6 +8,8 @@ from config import (
 )
 
 
+# ============ BIENVENIDA ============
+
 def welcome_message():
     return f"""
 ✨ *{BOT_NAME}* ✨
@@ -20,14 +22,12 @@ def welcome_message():
 🎁 *PLAN GRATIS*
 → Gana *${REFERRAL_REGISTRATION_FEE:.2f}* por cada amigo
 → Retira desde *${MIN_WITHDRAWAL_FREE:.0f}*
-→ Sin invertir nada
 
 💎 *PLAN PREMIUM* — ${ENTRY_PRICE:.0f} único
 → Gana *${REFERRAL_REGISTRATION_FEE:.2f}* por cada amigo
-→ + *${REFERRAL_COMMISSION:.2f}* cuando depositan
-→ Total: *${REFERRAL_REGISTRATION_FEE + REFERRAL_COMMISSION:.2f}* por activo
+→ + *${REFERRAL_COMMISSION:.2f}* por referido premium
 → Retira desde *${MIN_WITHDRAWAL:.0f}*
-→ Bonos hasta *$500*
+→ Bonos hasta *$190*
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -36,6 +36,8 @@ def welcome_message():
 *El momento es ahora.*
 """
 
+
+# ============ CÓMO FUNCIONA ============
 
 def how_it_works_message():
     return f"""
@@ -52,13 +54,12 @@ def how_it_works_message():
 
 💎 *PLAN PREMIUM* — ${ENTRY_PRICE:.0f} único
 
-1️⃣ Depositas ${ENTRY_PRICE:.0f} USDT
+1️⃣ Depositas ${ENTRY_PRICE:.0f} USDT (BEP20)
 2️⃣ Acceso premium de por vida
 3️⃣ Cada amigo que entra → *+${REFERRAL_REGISTRATION_FEE:.2f}*
-4️⃣ Si ese amigo deposita → *+${REFERRAL_COMMISSION:.2f}*
-5️⃣ Total por activo: *${REFERRAL_REGISTRATION_FEE + REFERRAL_COMMISSION:.2f}*
-6️⃣ Bonos hasta $500
-7️⃣ Retiras desde *${MIN_WITHDRAWAL:.0f}*
+4️⃣ Cada referido premium → *+${REFERRAL_COMMISSION:.2f}*
+5️⃣ Bonos hasta *$190*
+6️⃣ Retiras desde *${MIN_WITHDRAWAL:.0f}*
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -67,7 +68,7 @@ def how_it_works_message():
 Si 10 amigos entran:
 → 10 × ${REFERRAL_REGISTRATION_FEE:.2f} = *${10 * REFERRAL_REGISTRATION_FEE:.2f}*
 
-Si 5 de ellos depositan:
+Si 5 adquieren premium:
 → 5 × ${REFERRAL_COMMISSION:.2f} = *${5 * REFERRAL_COMMISSION:.2f}*
 
 *TOTAL: ${10 * REFERRAL_REGISTRATION_FEE + 5 * REFERRAL_COMMISSION:.2f}* 🔥
@@ -78,6 +79,8 @@ Si 5 de ellos depositan:
 """
 
 
+# ============ DEPÓSITO ============
+
 def deposit_message():
     return f"""
 🚀 *ACTIVA TU PREMIUM*
@@ -87,9 +90,8 @@ def deposit_message():
 💎 *${ENTRY_PRICE:.0f} USDT = Acceso de por vida*
 
 ✅ *${REFERRAL_REGISTRATION_FEE:.2f}* por cada amigo que entra
-✅ *${REFERRAL_COMMISSION:.2f}* por cada amigo que deposita
-✅ Total: *${REFERRAL_REGISTRATION_FEE + REFERRAL_COMMISSION:.2f}* por activo
-✅ Bonos hasta *$500*
+✅ *${REFERRAL_COMMISSION:.2f}* por cada referido premium
+✅ Bonos hasta *$190*
 ✅ Retiros desde *${MIN_WITHDRAWAL:.0f}*
 ✅ Soporte prioritario
 
@@ -103,54 +105,90 @@ def deposit_message():
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-⚠️ *Envía exactamente ${ENTRY_PRICE:.0f}*
+⚠️ *Pasos:*
+1️⃣ Vincula tu wallet
+2️⃣ Envía ${ENTRY_PRICE:.0f} USDT
+3️⃣ Espera 30 segundos
+
+*Envía exactamente ${ENTRY_PRICE:.0f}*
 *Solo USDT en red BEP20*
-
-*Después envía la captura.*
 """
 
 
-def send_proof_message():
+# ============ VINCULAR WALLET ============
+
+def wallet_setup_message():
     return f"""
-📸 *ENVÍA TU CAPTURA*
+🔗 *VINCULA TU WALLET*
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Que muestre:
-✅ Monto: ${ENTRY_PRICE:.0f} USDT
-✅ Red: BEP20
-✅ Fecha reciente
+Envía tu dirección USDT BEP20:
+
+⚠️ Debe empezar con `0x`
+⚠️ Es la wallet desde donde
+   enviarás los ${ENTRY_PRICE:.0f}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-*Tu futuro empieza aquí.*
+📌 *Los depósitos se detectarán*
+*automáticamente.*
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+💡 *Ejemplo:*
+`0x742d35Cc6634C0532925a3b8...`
 """
 
 
-def proof_received_message(ticket):
+def wallet_linked_message(wallet):
+    wallet_short = f"{wallet[:10]}...{wallet[-6:]}"
     return f"""
-✅ *RECIBIDO*
+✅ *WALLET VINCULADA*
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-🆔 `{ticket}`
-⏱️ En revisión
-⏰ Menos de 24h
+📍 *Tu wallet:*
+`{wallet_short}`
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-*Estás a un paso.*
+🚀 *AHORA ENVÍA ${ENTRY_PRICE:.0f} USDT*
+
+📋 A esta dirección:
+`{DEPOSIT_WALLET}`
+
+🪙 Red: BEP20
+💵 Monto: ${ENTRY_PRICE:.0f} USDT
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⏱️ El sistema detectará el depósito
+automáticamente en 30 segundos.
+
+🔔 Recibirás una notificación
+cuando se active tu premium.
 """
 
 
-def deposit_approved_message(user, referral_code):
+# ============ PREMIUM ACTIVADO ============
+
+def premium_activated_message(referral_code):
     return f"""
-✨ *BIENVENIDO AL PREMIUM*
+✨ *PLAN PREMIUM ACTIVADO*
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-✅ Acceso premium activado
-🎯 Listo para crecer
+🎉 *Bienvenido al plan premium*
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+💎 *TUS BENEFICIOS:*
+
+→ ${REFERRAL_REGISTRATION_FEE:.2f} por cada amigo que entra
+→ ${REFERRAL_COMMISSION:.2f} por cada referido premium
+→ Bonos hasta $190
+→ Retira desde ${MIN_WITHDRAWAL:.0f}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -160,40 +198,26 @@ def deposit_approved_message(user, referral_code):
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-💸 *TUS COMISIONES:*
+💸 *Comparte y empieza a ganar*
 
-👥 Si entra con tu link → *+${REFERRAL_REGISTRATION_FEE:.2f}*
-💰 Si deposita ${ENTRY_PRICE:.0f} → *+${REFERRAL_COMMISSION:.2f}*
-
-*TOTAL por activo: ${REFERRAL_REGISTRATION_FEE + REFERRAL_COMMISSION:.2f}* 🔥
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-🎁 *Bonos:*
-10 activos → $10
-50 activos → $25
-100 activos → $50
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-*Comparte. Crece. Gana.*
+*El momento es ahora.*
 """
 
+
+# ============ MENÚ PRINCIPAL ============
 
 def main_menu_message(user):
     plan = "💎 PREMIUM" if user['has_deposited'] else "🎁 GRATIS"
     
     if user['has_deposited']:
-        comision_texto = f"${REFERRAL_REGISTRATION_FEE + REFERRAL_COMMISSION:.2f} por activo"
-        min_w = MIN_WITHDRAWAL
+        comision_texto = f"${REFERRAL_COMMISSION:.2f} por ref. premium"
     else:
         comision_texto = f"${REFERRAL_REGISTRATION_FEE:.2f} por referido"
-        min_w = MIN_WITHDRAWAL_FREE
     
-    progress = int((user['total_active'] / 10) * 100) if user['total_active'] < 10 else 100
-    bar_length = 10
-    filled = int((progress / 100) * bar_length)
-    bar = "▓" * filled + "░" * (bar_length - filled)
+    # Barra de progreso para bono de 10
+    progress = int((user['total_premium'] / 10) * 100) if user['total_premium'] < 10 else 100
+    filled = int((progress / 100) * 10)
+    bar = "▓" * filled + "░" * (10 - filled)
     
     return f"""
 💰 *{BOT_NAME}*
@@ -209,13 +233,13 @@ def main_menu_message(user):
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-👥 Registrados: *{user['total_registered']}*
-✅ Activos: *{user['total_active']}*
+👥 Referidos: *{user['total_registered']}*
+✅ Premium: *{user['total_premium']}*
 ⏳ Pendientes: *{user['total_pending']}*
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-🎁 *BONO $10* ({user['total_active']}/10)
+🎁 *BONO $10* ({user['total_premium']}/10)
 {bar} {progress}%
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -223,6 +247,8 @@ def main_menu_message(user):
 🔥 *Tu red crece. Tú creces.*
 """
 
+
+# ============ MI LINK ============
 
 def my_link_message(user, bot_username):
     link = f"https://t.me/{bot_username}?start={user['referral_code']}"
@@ -242,7 +268,7 @@ def my_link_message(user, bot_username):
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 👥 Registrados: *{user['total_registered']}*
-✅ Activos: *{user['total_active']}*
+✅ Premium: *{user['total_premium']}*
 ⏳ Pendientes: *{user['total_pending']}*
 
 💰 Ganado: *${user['total_earned']:.2f}*
@@ -254,48 +280,54 @@ def my_link_message(user, bot_username):
 """
 
 
+# ============ MIS REFERIDOS ============
+
 def my_referrals_message(user, referrals):
-    active = [r for r in referrals if r['has_deposited']]
-    pending = [r for r in referrals if not r['has_deposited']]
+    premium = [r for r in referrals if r['has_deposited']]
+    gratis = [r for r in referrals if not r['has_deposited']]
     
     text = f"""
 👥 *TUS REFERIDOS*
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+📊 *RESUMEN:*
 👥 Registrados: *{len(referrals)}*
-✅ Activos: *{len(active)}*
-⏳ Pendientes: *{len(pending)}*
+✅ Premium: *{len(premium)}*
+⏳ Gratis: *{len(gratis)}*
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
     
-    if active:
-        text += "\n✅ *ACTIVOS*\n\n"
-        for i, ref in enumerate(active[:10], 1):
-            comision = REFERRAL_COMMISSION if user['has_deposited'] else 0
-            text += f"{i}. @{ref['username'] or 'usuario'}  *+${comision:.2f}*\n"
+    if premium:
+        text += "\n💎 *REFERIDOS PREMIUM*\n\n"
+        for i, ref in enumerate(premium[:10], 1):
+            text += f"{i}. @{ref['username'] or 'usuario'}  *+${REFERRAL_COMMISSION:.2f}*\n"
         
-        if len(active) > 10:
-            text += f"\n_...y {len(active) - 10} más_\n"
+        if len(premium) > 10:
+            text += f"\n_...y {len(premium) - 10} más_\n"
     
-    if pending:
+    if gratis:
         text += "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-        text += "\n⏳ *PENDIENTES*\n\n"
-        for i, ref in enumerate(pending[:10], len(active) + 1):
-            text += f"{i}. @{ref['username'] or 'usuario'}  *+${REFERRAL_REGISTRATION_FEE:.2f}*\n"
+        text += "\n🎁 *REFERIDOS GRATIS*\n\n"
+        for i, ref in enumerate(gratis[:10], len(premium) + 1):
+            text += f"{i}. @{ref['username'] or 'usuario'}\n"
         
-        if len(pending) > 10:
-            text += f"\n_...y {len(pending) - 10} más_\n"
+        if len(gratis) > 10:
+            text += f"\n_...y {len(gratis) - 10} más_\n"
+    
+    if not referrals:
+        text += "\n_(ninguno aún)_\n"
     
     text += """
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-💡 *Recuérdales que depositen.*
-*Cada activo es ganancia.*
+💡 *Comparte tu link para crecer.*
 """
     return text
 
+
+# ============ RETIRO ============
 
 def withdraw_message(user):
     if user['has_deposited']:
@@ -311,15 +343,20 @@ def withdraw_message(user):
         falta = max(0, min_withdrawal - user['balance'])
         
         text = f"""
-⏳ *AÚN NO PUEDES RETIRAR*
+💸 *RETIRAR*
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 {plan}
 
-💵 Saldo: *${user['balance']:.2f}* / ${min_withdrawal:.2f}
+💵 Disponible: *${user['balance']:.2f}*
+📉 Mínimo: *${min_withdrawal:.2f}*
+⚡ Menos de 24h
+🪙 BEP20
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⏳ *AÚN NO PUEDES RETIRAR*
 
 💡 Te falta *${falta:.2f}*
 """
@@ -332,9 +369,9 @@ def withdraw_message(user):
 
 Activa PREMIUM por ${ENTRY_PRICE:.0f}:
 
-✅ ${REFERRAL_COMMISSION:.2f} por referido activo
+✅ ${REFERRAL_COMMISSION:.2f} por referido premium
 ✅ Mínimo retiro: ${MIN_WITHDRAWAL:.0f}
-✅ Bonos hasta $500
+✅ Bonos hasta $190
 """
         
         text += "\n*Sigue compartiendo.*\n*Estás cerca.*\n"
@@ -354,23 +391,22 @@ Activa PREMIUM por ${ENTRY_PRICE:.0f}:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-✅ *Listo para retirar*
-
-*Tu esfuerzo, recompensado.*
+💰 *¿Cuánto quieres retirar?*
 """
 
 
 def wallet_request_message(amount):
     return f"""
-📝 *TU WALLET BEP20*
+📝 *DIRECCIÓN DE RETIRO*
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 💰 Monto: *${amount:.2f}*
+🪙 Red: BEP20
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Envía tu dirección USDT BEP20:
+Envía tu dirección BEP20:
 
 ⚠️ Debe empezar con `0x`
 ⚠️ Verifica que sea BEP20
@@ -382,15 +418,16 @@ Envía tu dirección USDT BEP20:
 
 
 def withdrawal_created_message(ticket, amount, wallet):
+    wallet_short = f"{wallet[:10]}...{wallet[-6:]}"
     return f"""
 ✅ *SOLICITUD ENVIADA*
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-🆔 `{ticket}`
-💰 *${amount:.2f}*
-📍 `{wallet[:10]}...{wallet[-6:]}`
-⏱️ Pendiente
+🆔 Ticket: `{ticket}`
+💰 Monto: *${amount:.2f}*
+📍 Wallet: `{wallet_short}`
+⏱️ Estado: Pendiente
 ⏰ Menos de 24h
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -398,6 +435,8 @@ def withdrawal_created_message(ticket, amount, wallet):
 *Tu dinero está en camino.*
 """
 
+
+# ============ BONOS ============
 
 def bonuses_message(user):
     if not user['has_deposited']:
@@ -410,15 +449,14 @@ Los bonos son exclusivos del *PLAN PREMIUM*.
 
 🚀 *Activa PREMIUM por ${ENTRY_PRICE:.0f}* y desbloquea:
 
-🎁 $10 al llegar a 10 activos
-🎁 $25 al llegar a 50 activos
-🎁 $50 al llegar a 100 activos
-🎁 $250 al llegar a 500 activos
-🎁 $500 al llegar a 1,000 activos
+🎁 $10 al llegar a 10 premium
+🎁 $30 al llegar a 30 premium
+🎁 $50 al llegar a 50 premium
+🎁 $100 al llegar a 100 premium
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-*Total en bonos: $835*
+*Total en bonos: $190*
 """
     
     text = f"""
@@ -428,51 +466,70 @@ Los bonos son exclusivos del *PLAN PREMIUM*.
 
 """
     for required, amount in sorted(BONUSES.items()):
-        active = user['total_active']
-        unlocked = active >= required
-        progress = min(100, int((active / required) * 100))
+        premium = user['total_premium']
+        unlocked = premium >= required
+        progress = min(100, int((premium / required) * 100))
         
         status = "✅" if unlocked else "🔒"
         filled = progress // 10
         bar = "▓" * filled + "░" * (10 - filled)
         
-        text += f"{status} *${amount:.0f}* — {required} activos\n"
-        text += f"   {bar} {active}/{required}\n\n"
+        text += f"{status} *${amount:.0f}* — {required} premium\n"
+        text += f"   {bar} {premium}/{required}\n\n"
     
     text += f"""━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 💰 *Ganado en bonos:* ${user['total_bonuses']:.2f}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-*Cada referido te acerca.*
+*Cada referido premium te acerca.*
 """
     return text
 
 
 def bonus_unlocked_message(required, amount, user):
-    return f"""
+    siguiente = None
+    for req, amt in sorted(BONUSES.items()):
+        if req > required:
+            siguiente = (req, amt)
+            break
+    
+    text = f"""
 🎉 *BONO DESBLOQUEADO*
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 🎁 *+${amount:.2f}*
 
-✅ Llegaste a *{required} activos*
+✅ Llegaste a *{required} referidos premium*
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 💵 Nuevo saldo: *${user['balance']:.2f}*
-👥 Activos: *{user['total_active']}*
+✅ Premium: *{user['total_premium']}*
 🎁 Bonos: *${user['total_bonuses']:.2f}*
+"""
+    
+    if siguiente:
+        text += f"""
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+🎯 *Siguiente bono:*
+${siguiente[1]:.0f} al llegar a {siguiente[0]} premium
+"""
+    
+    text += """
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 🔥 *Esto es solo el comienzo.*
 """
+    return text
 
+
+# ============ RANKING ============
 
 def ranking_message(ranking, user_id):
     text = """
-🏆 *RANKING PREMIUM*
+🏆 *RANKING*
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -483,21 +540,21 @@ def ranking_message(ranking, user_id):
         medal = medals[i-1] if i <= 3 else f"{i}."
         username = user['username'] or f"user{user['id']}"
         marker = " ← *tú*" if user['id'] == user_id else ""
-        text += f"{medal} @{username}  *${user['total_earned']:.2f}*{marker}\n"
+        text += f"{medal} @{username}  *{user['total_registered']} refs*{marker}\n"
+    
+    if not ranking:
+        text += "_(ninguno aún)_\n"
     
     text += """
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-🎁 *Premios semanales:*
-🥇 $50  |  🥈 $25  |  🥉 $10
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-*¿Quieres estar arriba?*
+🔥 *¿Quieres estar arriba?*
 *Comparte más.*
 """
     return text
 
+
+# ============ AYUDA ============
 
 def help_message():
     return f"""
@@ -511,7 +568,7 @@ def help_message():
 
 💎 *PLAN PREMIUM*
 → ${REFERRAL_REGISTRATION_FEE:.2f} por amigo
-→ +${REFERRAL_COMMISSION:.2f} si deposita
+→ +${REFERRAL_COMMISSION:.2f} por referido premium
 → Retira desde ${MIN_WITHDRAWAL:.0f}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -524,12 +581,17 @@ def help_message():
 🪙 *¿Qué red?*
 → BEP20 (BSC)
 
-⏳ *¿Por qué no gano $3.75?*
+💰 *¿Cuánto por referido?*
+→ ${REFERRAL_REGISTRATION_FEE:.2f} por registro
+→ +${REFERRAL_COMMISSION:.2f} si adquiere premium
+
+⏳ *¿Por qué no gano ${REFERRAL_COMMISSION:.2f}?*
 → Solo premium gana esa comisión
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-💬 *Soporte:* @TuSoporte
+💬 *Soporte:* @YordanSoporte
+⏰ Respuesta en menos de 6h
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -537,69 +599,61 @@ def help_message():
 """
 
 
-def new_referral_notification(username, referrer_has_deposit=False):
-    if referrer_has_deposit:
-        return f"""
-👥 *NUEVO REGISTRADO*
+# ============ SOPORTE ============
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-@{username} entró con tu link.
-
-✅ *+${REFERRAL_REGISTRATION_FEE:.2f}* acreditados
-⏳ *Pendiente de depósito*
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-💡 *Si deposita ${ENTRY_PRICE:.0f}:*
-*Ganas +${REFERRAL_COMMISSION:.2f}*
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-*Cada pendiente es una oportunidad.*
-"""
-    else:
-        return f"""
-👥 *NUEVO REGISTRADO*
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-@{username} entró con tu link.
-
-✅ *+${REFERRAL_REGISTRATION_FEE:.2f}* acreditados
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-💡 *Activa PREMIUM y gana*
-*${REFERRAL_COMMISSION:.2f} por cada depósito.*
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-*Cada pendiente es una oportunidad.*
-"""
-
-
-def referral_deposited_notification(username, amount, balance, active):
+def support_message():
     return f"""
-💰 *+${amount:.2f}*
+📞 *SOPORTE*
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-✅ @{username} depositó
+💬 *¿Tienes algún problema?*
+
+Si tu depósito no se acreditó:
+→ Contacta al soporte
+→ Envía tu TX hash
+→ Te ayudaremos en menos de 6h
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📩 *Contacto:*
+@YordanSoporte
+
+⏰ Respuesta en menos de 6h
+"""
+
+
+# ============ NOTIFICACIONES ============
+
+def new_referral_notification(username):
+    return f"""
+👥 *+${REFERRAL_REGISTRATION_FEE:.2f}*
+
+@{username} entró con tu link.
+"""
+
+
+def referral_premium_notification(username, amount, balance, premium):
+    return f"""
+💰 *¡¡¡+${amount:.2f}!!!*
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ @{username} adquirió premium
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 💵 Saldo: *${balance:.2f}*
-✅ Activos: *{active}*
+💎 Premium: *{premium}*
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-*Tu red crece.*
-*Sigue así.*
+🔥 *Tu red crece.*
 """
 
 
 def withdrawal_paid_notification(ticket, amount, wallet):
+    wallet_short = f"{wallet[:10]}...{wallet[-6:]}"
     return f"""
 ✨ *PAGADO*
 
@@ -607,7 +661,7 @@ def withdrawal_paid_notification(ticket, amount, wallet):
 
 🆔 `{ticket}`
 💰 *${amount:.2f}*
-📍 `{wallet[:10]}...{wallet[-6:]}`
+📍 `{wallet_short}`
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
