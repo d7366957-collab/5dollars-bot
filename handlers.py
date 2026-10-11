@@ -1,9 +1,7 @@
 """
-Manejadores de eventos del bot
+Manejadores de eventos del bot 5DOLLARS
 """
 import random
-import re
-from datetime import datetime
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 
@@ -14,27 +12,31 @@ from config import (
 )
 from database import (
     get_user, create_user, update_user, add_balance,
-    get_user_by_referral_code, create_deposit,
-    process_referral_registration, process_referral_commission,
-    check_bonuses, get_referrals, get_commissions,
-    create_withdrawal, get_withdrawals, get_ranking,
-    get_global_stats, get_pending_deposits, get_pending_withdrawals,
-    approve_deposit, reject_deposit, approve_withdrawal, reject_withdrawal,
-    link_wallet_to_user, get_user_by_wallet, create_auto_deposit
+    get_user_by_referral_code, process_referral_registration,
+    process_premium_commission, check_bonuses,
+    get_referrals, get_commissions, create_withdrawal,
+    get_withdrawals, get_ranking, get_global_stats,
+    get_pending_withdrawals, approve_withdrawal, reject_withdrawal,
+    link_wallet_to_user, get_user_by_wallet,
+    give_premium, remove_premium
 )
 from keyboards import (
     main_menu_keyboard, welcome_keyboard, how_it_works_keyboard,
-    deposit_keyboard, after_deposit_keyboard, withdrawal_keyboard,
-    back_keyboard, admin_deposit_keyboard, admin_withdrawal_keyboard,
-    admin_panel_keyboard, activate_premium_keyboard, wallet_setup_keyboard
+    deposit_keyboard, wallet_setup_keyboard, wallet_linked_keyboard,
+    after_premium_keyboard, withdrawal_keyboard,
+    activate_premium_keyboard, back_keyboard, ranking_keyboard,
+    support_keyboard, admin_panel_keyboard,
+    admin_withdrawal_keyboard
 )
 from messages import (
     welcome_message, how_it_works_message, deposit_message,
-    send_proof_message, proof_received_message, deposit_approved_message,
-    main_menu_message, my_link_message, my_referrals_message,
-    withdraw_message, wallet_request_message, withdrawal_created_message,
+    wallet_setup_message, wallet_linked_message,
+    premium_activated_message, main_menu_message,
+    my_link_message, my_referrals_message, withdraw_message,
+    wallet_request_message, withdrawal_created_message,
     bonuses_message, bonus_unlocked_message, ranking_message,
-    help_message, new_referral_notification, referral_deposited_notification,
+    help_message, support_message,
+    new_referral_notification, referral_premium_notification,
     withdrawal_paid_notification
 )
 
@@ -43,6 +45,8 @@ def is_admin(user_id):
     """Verifica si es admin"""
     return user_id in ADMIN_IDS
 
+
+# ============ COMANDO /start ============
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
@@ -55,13 +59,21 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("❌ Estás baneado del sistema.")
             return
         
-        await update.message.reply_text(
-            main_menu_message(existing),
-            reply_markup=main_menu_keyboard(),
-            parse_mode="Markdown"
-        )
+        if existing['has_deposited']:
+            await update.message.reply_text(
+                main_menu_message(existing),
+                reply_markup=main_menu_keyboard(),
+                parse_mode="Markdown"
+            )
+        else:
+            await update.message.reply_text(
+                deposit_message(),
+                reply_markup=deposit_keyboard(),
+                parse_mode="Markdown"
+            )
         return
     
+    # Usuario nuevo
     referrer_id = None
     if args:
         referrer = get_user_by_referral_code(args[0])
@@ -82,14 +94,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             try:
                 await context.bot.send_message(
                     chat_id=referrer_id,
-                    text=new_referral_notification(
-                        user.username or user.first_name,
-                        referrer['has_deposited'] == 1
-                    ),
+                    text=new_referral_notification(user.username or user.first_name),
                     parse_mode="Markdown"
                 )
             except Exception as e:
-                print(f"Error: {e}")
+                print(f"Error notificando: {e}")
     
     await update.message.reply_text(
         welcome_message(),
@@ -97,6 +106,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode="Markdown"
     )
 
+
+# ============ COMANDO /menu ============
 
 async def menu_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = get_user(update.effective_user.id)
@@ -110,6 +121,8 @@ async def menu_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode="Markdown"
     )
 
+
+# ============ COMANDO /admin ============
 
 async def admin_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(update.effective_user.id):
@@ -147,6 +160,8 @@ async def admin_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
+# ============ MANEJADOR DE BOTONES ============
+
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -155,11 +170,19 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = query.from_user.id
     user = get_user(user_id)
     
+    # ============ NAVEGACIÓN ============
+    
     if data == "back" or data == "menu":
-        if user:
+        if user and user['has_deposited']:
             await query.edit_message_text(
                 main_menu_message(user),
                 reply_markup=main_menu_keyboard(),
+                parse_mode="Markdown"
+            )
+        elif user:
+            await query.edit_message_text(
+                deposit_message(),
+                reply_markup=deposit_keyboard(),
                 parse_mode="Markdown"
             )
         else:
@@ -184,38 +207,24 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
     
     elif data == "setup_wallet":
-        context.user_data['awaiting_user_wallet'] = True
+        context.user_data['awaiting_wallet'] = True
         await query.edit_message_text(
-            "🔗 *VINCULA TU WALLET*\n\n"
-            "Envía tu dirección USDT BEP20:\n\n"
-            "⚠️ Debe empezar con `0x`\n"
-            "⚠️ Es la wallet desde donde enviarás los $5\n\n"
-            "📌 *Los depósitos se detectarán automáticamente.*",
-            parse_mode="Markdown",
-            reply_markup=back_keyboard()
+            wallet_setup_message(),
+            reply_markup=back_keyboard(),
+            parse_mode="Markdown"
         )
     
     elif data == "copy_address":
         await query.answer(f"Dirección: {DEPOSIT_WALLET}", show_alert=True)
     
-    elif data == "sent_payment":
-        await query.edit_message_text(
-            send_proof_message(),
-            reply_markup=back_keyboard(),
-            parse_mode="Markdown"
-        )
-        context.user_data['awaiting_proof'] = True
-    
-    elif data == "check_payment":
-        await query.answer("⏳ Verificando...", show_alert=True)
-    
     elif data == "my_link":
         bot_username = (await context.bot.get_me()).username
+        link = f"https://t.me/{bot_username}?start={user['referral_code']}"
         await query.edit_message_text(
             my_link_message(user, bot_username),
             reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("📤 Compartir", url=f"https://t.me/share/url?url=https://t.me/{bot_username}?start={user['referral_code']}")],
-                [InlineKeyboardButton("⬅️ Atrás", callback_data="menu")]
+                [InlineKeyboardButton("📤 COMPARTIR", url=f"https://t.me/share/url?url={link}")],
+                [InlineKeyboardButton("🏠 MENÚ", callback_data="menu")]
             ]),
             parse_mode="Markdown"
         )
@@ -242,7 +251,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=back_keyboard(),
             parse_mode="Markdown"
         )
-        context.user_data['awaiting_wallet'] = True
+        context.user_data['awaiting_withdraw_wallet'] = True
     
     elif data == "withdraw_all":
         amount = user['balance']
@@ -252,7 +261,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=back_keyboard(),
             parse_mode="Markdown"
         )
-        context.user_data['awaiting_wallet'] = True
+        context.user_data['awaiting_withdraw_wallet'] = True
     
     elif data == "withdraw_custom":
         min_w = MIN_WITHDRAWAL if user['has_deposited'] else MIN_WITHDRAWAL_FREE
@@ -307,47 +316,25 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ranking = get_ranking(50)
         await query.edit_message_text(
             ranking_message(ranking, user_id),
-            reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("🔄 Actualizar", callback_data="ranking")],
-                [InlineKeyboardButton("⬅️ Atrás", callback_data="menu")]
-            ]),
+            reply_markup=ranking_keyboard(),
             parse_mode="Markdown"
         )
     
-    elif data == "help" or data == "support":
+    elif data == "help":
         await query.edit_message_text(
             help_message(),
             reply_markup=back_keyboard(),
             parse_mode="Markdown"
         )
     
-    # ============ ADMIN ============
+    elif data == "support":
+        await query.edit_message_text(
+            support_message(),
+            reply_markup=support_keyboard(),
+            parse_mode="Markdown"
+        )
     
-    elif data == "admin_deposits":
-        if not is_admin(user_id):
-            return
-        
-        deposits = get_pending_deposits()
-        
-        if not deposits:
-            await query.edit_message_text("📥 No hay depósitos pendientes.", reply_markup=back_keyboard())
-            return
-        
-        for dep in deposits[:5]:
-            text = f"""
-📥 *DEPÓSITO PENDIENTE*
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-🆔 `{dep['ticket']}`
-👤 @{dep['username'] or dep['first_name']} (ID: `{dep['user_id']}`)
-💰 ${dep['amount']:.2f}
-"""
-            await query.message.reply_text(
-                text,
-                reply_markup=admin_deposit_keyboard(dep['ticket']),
-                parse_mode="Markdown"
-            )
+    # ============ ADMIN ============
     
     elif data == "admin_withdrawals":
         if not is_admin(user_id):
@@ -402,62 +389,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode="Markdown"
         )
     
-    elif data.startswith("approve_dep_"):
-        if not is_admin(user_id):
-            return
-        
-        ticket = data.replace("approve_dep_", "")
-        deposit = approve_deposit(ticket, user_id)
-        
-        if deposit:
-            await query.edit_message_text(f"✅ Depósito {ticket} aprobado.")
-            
-            user_dep = get_user(deposit['user_id'])
-            try:
-                await context.bot.send_message(
-                    chat_id=deposit['user_id'],
-                    text=deposit_approved_message(user_dep, user_dep['referral_code']),
-                    reply_markup=after_deposit_keyboard(),
-                    parse_mode="Markdown"
-                )
-            except Exception as e:
-                print(f"Error: {e}")
-            
-            if user_dep['referrer_id']:
-                referrer = get_user(user_dep['referrer_id'])
-                if referrer and referrer['has_deposited']:
-                    bonus = check_bonuses(referrer['id'])
-                    referrer = get_user(referrer['id'])
-                    
-                    try:
-                        await context.bot.send_message(
-                            chat_id=referrer['id'],
-                            text=referral_deposited_notification(
-                                user_dep['username'] or user_dep['first_name'],
-                                REFERRAL_COMMISSION,
-                                referrer['balance'],
-                                referrer['total_active']
-                            ),
-                            parse_mode="Markdown"
-                        )
-                        
-                        if bonus:
-                            await context.bot.send_message(
-                                chat_id=referrer['id'],
-                                text=bonus_unlocked_message(bonus[0], bonus[1], referrer),
-                                parse_mode="Markdown"
-                            )
-                    except Exception as e:
-                        print(f"Error: {e}")
-    
-    elif data.startswith("reject_dep_"):
-        if not is_admin(user_id):
-            return
-        
-        ticket = data.replace("reject_dep_", "")
-        reject_deposit(ticket, user_id)
-        await query.edit_message_text(f"❌ Depósito {ticket} rechazado.")
-    
     elif data.startswith("approve_wd_"):
         if not is_admin(user_id):
             return
@@ -490,44 +421,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text(f"❌ Retiro {ticket} rechazado.")
 
 
-async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    user = get_user(user_id)
-    
-    if not user:
-        return
-    
-    if context.user_data.get('awaiting_proof'):
-        ticket = f"DEP-{random.randint(100000, 999999)}"
-        create_deposit(user_id, ENTRY_PRICE, ticket)
-        
-        await update.message.reply_text(
-            proof_received_message(ticket),
-            reply_markup=back_keyboard(),
-            parse_mode="Markdown"
-        )
-        
-        try:
-            await context.bot.send_message(
-                chat_id=ADMIN_ID,
-                text=f"""
-🔔 *NUEVO DEPÓSITO*
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-🆔 `{ticket}`
-👤 @{user['username'] or user['first_name']}
-🆔 ID: `{user_id}`
-💰 ${ENTRY_PRICE:.2f}
-""",
-                reply_markup=admin_deposit_keyboard(ticket),
-                parse_mode="Markdown"
-            )
-        except Exception as e:
-            print(f"Error: {e}")
-        
-        context.user_data['awaiting_proof'] = False
-
+# ============ MANEJADOR DE TEXTO ============
 
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -538,7 +432,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     
     # ============ VINCULAR WALLET ============
-    if context.user_data.get('awaiting_user_wallet'):
+    if context.user_data.get('awaiting_wallet'):
         wallet = text
         
         if not (wallet.startswith("0x") and len(wallet) == 42):
@@ -556,18 +450,16 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         link_wallet_to_user(user_id, wallet)
         
         await update.message.reply_text(
-            f"✅ *WALLET VINCULADA*\n\n"
-            f"`{wallet}`\n\n"
-            f"Ahora envía ${ENTRY_PRICE:.0f} USDT desde esta wallet.\n\n"
-            f"El depósito se detectará automáticamente.",
+            wallet_linked_message(wallet),
+            reply_markup=wallet_linked_keyboard(),
             parse_mode="Markdown"
         )
         
-        context.user_data['awaiting_user_wallet'] = False
+        context.user_data['awaiting_wallet'] = False
         return
     
     # ============ RETIRO CON WALLET ============
-    if context.user_data.get('awaiting_wallet'):
+    if context.user_data.get('awaiting_withdraw_wallet'):
         wallet = text
         
         if not (wallet.startswith("0x") and len(wallet) == 42):
@@ -588,6 +480,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode="Markdown"
         )
         
+        # Notificar al admin
         try:
             await context.bot.send_message(
                 chat_id=ADMIN_ID,
@@ -609,7 +502,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except Exception as e:
             print(f"Error: {e}")
         
-        context.user_data['awaiting_wallet'] = False
+        context.user_data['awaiting_withdraw_wallet'] = False
         context.user_data['withdraw_amount'] = None
         return
     
@@ -629,7 +522,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
             
             context.user_data['withdraw_amount'] = amount
             context.user_data['awaiting_custom_amount'] = False
-            context.user_data['awaiting_wallet'] = True
+            context.user_data['awaiting_withdraw_wallet'] = True
             
             await update.message.reply_text(
                 wallet_request_message(amount),
