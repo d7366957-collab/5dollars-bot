@@ -29,7 +29,7 @@ def init_db():
             referral_code TEXT UNIQUE,
             wallet_address TEXT,
             total_registered INTEGER DEFAULT 0,
-            total_active INTEGER DEFAULT 0,
+            total_premium INTEGER DEFAULT 0,
             total_pending INTEGER DEFAULT 0,
             total_earned REAL DEFAULT 0,
             total_withdrawn REAL DEFAULT 0,
@@ -73,7 +73,7 @@ def init_db():
             user_id INTEGER,
             from_user_id INTEGER,
             amount REAL,
-            type TEXT DEFAULT 'deposit',
+            type TEXT DEFAULT 'premium',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
@@ -200,7 +200,7 @@ def approve_deposit(ticket, admin_id):
     conn.commit()
     conn.close()
     
-    process_referral_commission(deposit['user_id'])
+    process_premium_commission(deposit['user_id'])
     
     return deposit
 
@@ -225,12 +225,12 @@ def process_referral_registration(user_id):
     user = get_user(user_id)
     
     if not user or not user['referrer_id']:
-        return
+        return None
     
     referrer = get_user(user['referrer_id'])
     
     if not referrer:
-        return
+        return None
     
     conn = get_connection()
     
@@ -254,55 +254,60 @@ def process_referral_registration(user_id):
     return referrer
 
 
-def process_referral_commission(user_id):
-    """Procesa la comisión de $3.00 cuando un referido deposita"""
+def process_premium_commission(user_id):
+    """Procesa la comisión de $3.50 cuando un referido adquiere premium"""
     user = get_user(user_id)
     
     if not user or not user['referrer_id']:
-        return
+        return None
     
     referrer = get_user(user['referrer_id'])
     
     if not referrer:
-        return
+        return None
     
+    # Solo pagar $3.50 si el referidor es premium
     if not referrer['has_deposited']:
-        return
+        return None
     
     conn = get_connection()
     
+    # Actualizar contadores y saldo del referidor
     conn.execute("""
         UPDATE users 
         SET balance = balance + ?,
             total_earned = total_earned + ?,
-            total_active = total_active + 1,
+            total_premium = total_premium + 1,
             total_pending = total_pending - 1
         WHERE id = ?
     """, (REFERRAL_COMMISSION, REFERRAL_COMMISSION, referrer['id']))
     
+    # Registrar comisión
     conn.execute("""
         INSERT INTO commissions (user_id, from_user_id, amount, type)
-        VALUES (?, ?, ?, 'deposit')
+        VALUES (?, ?, ?, 'premium')
     """, (referrer['id'], user_id, REFERRAL_COMMISSION))
     
     conn.commit()
     conn.close()
     
-    check_bonuses(referrer['id'])
+    # Verificar bonos
+    bonus = check_bonuses(referrer['id'])
     
-    return referrer
+    return referrer, bonus
 
 
 def check_bonuses(user_id):
+    """Verifica si el usuario desbloqueó algún bono"""
     user = get_user(user_id)
     
     if not user or not user['has_deposited']:
         return None
     
-    active = user['total_active']
+    premium = user['total_premium']
     
     for required, amount in sorted(BONUSES.items()):
-        if active >= required:
+        if premium >= required:
             conn = get_connection()
             existing = conn.execute("""
                 SELECT * FROM bonuses 
@@ -438,7 +443,6 @@ def get_withdrawals(user_id):
 # ============ DEPÓSITOS AUTOMÁTICOS ============
 
 def link_wallet_to_user(user_id, wallet):
-    """Vincula wallet al usuario"""
     conn = get_connection()
     conn.execute("UPDATE users SET wallet_address = ? WHERE id = ?", (wallet, user_id))
     conn.commit()
@@ -446,7 +450,6 @@ def link_wallet_to_user(user_id, wallet):
 
 
 def get_user_by_wallet(wallet):
-    """Busca usuario por wallet"""
     conn = get_connection()
     user = conn.execute("SELECT * FROM users WHERE wallet_address = ?", (wallet,)).fetchone()
     conn.close()
@@ -454,7 +457,6 @@ def get_user_by_wallet(wallet):
 
 
 def create_auto_deposit(user_id, amount, tx_hash):
-    """Crea depósito automático"""
     ticket = f"AUTO-{tx_hash}"
     
     conn = get_connection()
@@ -469,6 +471,38 @@ def create_auto_deposit(user_id, amount, tx_hash):
     except sqlite3.IntegrityError:
         conn.close()
         return None
+
+
+# ============ ADMIN: DAR/QUITAR PREMIUM ============
+
+def give_premium(user_id):
+    """Da premium a un usuario sin pago (para sorteos/soporte)"""
+    user = get_user(user_id)
+    if not user:
+        return False
+    
+    conn = get_connection()
+    conn.execute("UPDATE users SET has_deposited = 1 WHERE id = ?", (user_id,))
+    conn.commit()
+    conn.close()
+    
+    # Procesar comisión al referidor (si aplica)
+    process_premium_commission(user_id)
+    
+    return True
+
+
+def remove_premium(user_id):
+    """Quita premium a un usuario"""
+    user = get_user(user_id)
+    if not user:
+        return False
+    
+    conn = get_connection()
+    conn.execute("UPDATE users SET has_deposited = 0 WHERE id = ?", (user_id,))
+    conn.commit()
+    conn.close()
+    return True
 
 
 # ============ ESTADÍSTICAS ============
@@ -502,10 +536,10 @@ def get_global_stats():
 def get_ranking(limit=50):
     conn = get_connection()
     ranking = conn.execute("""
-        SELECT id, username, total_active, total_earned
+        SELECT id, username, total_registered, total_earned
         FROM users
-        WHERE has_deposited = 1
-        ORDER BY total_active DESC, total_earned DESC
+        WHERE total_registered > 0
+        ORDER BY total_registered DESC, total_earned DESC
         LIMIT ?
     """, (limit,)).fetchall()
     conn.close()
