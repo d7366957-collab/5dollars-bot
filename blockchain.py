@@ -1,122 +1,175 @@
 """
-Depósitos automáticos via Etherscan V2 API (BSC)
+Detección de depósitos USDT BEP20 via RPC directo de BSC
+Sin API Key. Sin límites. Sin KYC.
 """
-import requests
+import json
+from web3 import Web3
 from config import (
-    BSCSCAN_API_KEY, BSCSCAN_API_URL,
-    DEPOSIT_WALLET, USDT_CONTRACT, ENTRY_PRICE, BSC_CHAIN_ID
+    BSC_NODES, DEPOSIT_WALLET, USDT_CONTRACT,
+    ENTRY_PRICE, BSC_CHAIN_ID
 )
 
-# Cache de TX procesadas (evita duplicados)
-processed_txs = set()
+# ============ CONEXIÓN A BSC ============
+
+_current_node_index = 0
 
 
-def get_usdt_transactions(wallet_address, limit=100):
-    """
-    Obtiene las últimas transacciones USDT BEP20 de una wallet
+def get_web3():
+    """Obtiene conexión a un nodo BSC (rota si falla)"""
+    global _current_node_index
     
-    Args:
-        wallet_address: Dirección de la wallet a consultar
-        limit: Número máximo de transacciones a obtener
+    for _ in range(len(BSC_NODES)):
+        try:
+            node = BSC_NODES[_current_node_index]
+            w3 = Web3(Web3.HTTPProvider(node, request_kwargs={'timeout': 10}))
+            
+            if w3.is_connected():
+                return w3
+            
+            # Rotar al siguiente nodo
+            _current_node_index = (_current_node_index + 1) % len(BSC_NODES)
+        
+        except Exception as e:
+            print(f"⚠️ Nodo {node} falló: {e}")
+            _current_node_index = (_current_node_index + 1) % len(BSC_NODES)
     
-    Returns:
-        Lista de transacciones o lista vacía si hay error
-    """
-    params = {
-        "chainid": BSC_CHAIN_ID,
-        "module": "account",
-        "action": "tokentx",
-        "contractaddress": USDT_CONTRACT,
-        "address": wallet_address,
-        "page": 1,
-        "offset": limit,
-        "sort": "desc",
-        "apikey": BSCSCAN_API_KEY
+    return None
+
+
+# ============ ABI MÍNIMO DE USDT ============
+
+USDT_ABI = json.loads("""
+[
+    {
+        "constant": true,
+        "inputs": [{"name": "_owner", "type": "address"}],
+        "name": "balanceOf",
+        "outputs": [{"name": "balance", "type": "uint256"}],
+        "type": "function"
+    },
+    {
+        "constant": false,
+        "inputs": [
+            {"name": "_to", "type": "address"},
+            {"name": "_value", "type": "uint256"}
+        ],
+        "name": "transfer",
+        "outputs": [{"name": "", "type": "bool"}],
+        "type": "function"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {"indexed": true, "name": "from", "type": "address"},
+            {"indexed": true, "name": "to", "type": "address"},
+            {"indexed": false, "name": "value", "type": "uint256"}
+        ],
+        "name": "Transfer",
+        "type": "event"
+    },
+    {
+        "constant": true,
+        "inputs": [],
+        "name": "decimals",
+        "outputs": [{"name": "", "type": "uint8"}],
+        "type": "function"
     }
-    
-    try:
-        response = requests.get(BSCSCAN_API_URL, params=params, timeout=10)
-        data = response.json()
-        
-        if data.get("status") == "1":
-            return data.get("result", [])
-        
-        # Si no hay transacciones o hay error
-        if data.get("message") == "No transactions found":
-            return []
-        
-        print(f"⚠️ Etherscan respuesta: {data.get('message', 'Unknown')}")
-        return []
-    
-    except requests.exceptions.Timeout:
-        print("❌ Etherscan: timeout")
-        return []
-    
-    except requests.exceptions.RequestException as e:
-        print(f"❌ Etherscan: error de red - {e}")
-        return []
-    
-    except Exception as e:
-        print(f"❌ Etherscan: error inesperado - {e}")
-        return []
+]
+""")
 
+
+# ============ CACHE DE TX PROCESADAS ============
+
+processed_txs = set()
+_last_checked_block = 0
+
+
+# ============ DETECCIÓN DE DEPÓSITOS ============
 
 def check_new_deposits():
     """
     Verifica nuevas transacciones USDT entrantes a DEPOSIT_WALLET
+    Consulta los últimos 5 bloques (~15 segundos)
     
     Returns:
         Lista de diccionarios con las nuevas transacciones válidas
     """
-    txs = get_usdt_transactions(DEPOSIT_WALLET)
+    global _last_checked_block
+    
+    w3 = get_web3()
+    
+    if not w3:
+        print("❌ No hay nodos BSC disponibles")
+        return []
+    
     new_deposits = []
     
-    if not txs:
-        return new_deposits
+    try:
+        # Último bloque
+        latest_block = w3.eth.block_number
+        
+        # Si es la primera vez, empezar desde el bloque actual
+        if _last_checked_block == 0:
+            _last_checked_block = latest_block - 5
+        
+        # Consultar bloques desde el último chequeo
+        from_block = _last_checked_block + 1
+        to_block = latest_block
+        
+        # Máximo 20 bloques a la vez
+        if to_block - from_block > 20:
+            from_block = to_block - 20
+        
+        # Contrato USDT
+        usdt = w3.eth.contract(
+            address=Web3.to_checksum_address(USDT_CONTRACT),
+            abi=USDT_ABI
+        )
+        
+        # Buscar eventos Transfer hacia DEPOSIT_WALLET
+        deposit_wallet_checksum = Web3.to_checksum_address(DEPOSIT_WALLET)
+        
+        transfer_filter = usdt.events.Transfer.create_filter(
+            fromBlock=from_block,
+            toBlock=to_block,
+            argument_filters={'to': deposit_wallet_checksum}
+        )
+        
+        events = transfer_filter.get_all_entries()
+        
+        for event in events:
+            tx_hash = event['transactionHash'].hex()
+            
+            # Evitar duplicados
+            if tx_hash in processed_txs:
+                continue
+            
+            # Convertir monto (18 decimales para BEP20 USDT)
+            try:
+                value = event['args']['value'] / (10 ** 18)
+            except (ValueError, TypeError):
+                continue
+            
+            # Solo depósitos del monto esperado (con tolerancia)
+            if abs(value - ENTRY_PRICE) > 0.01:
+                continue
+            
+            # TX válida
+            new_deposits.append({
+                "tx_hash": tx_hash,
+                "from": event['args']['from'].lower(),
+                "amount": value,
+                "block": event['blockNumber'],
+            })
+            
+            processed_txs.add(tx_hash)
+        
+        # Actualizar último bloque chequeado
+        _last_checked_block = to_block
     
-    for tx in txs:
-        tx_hash = tx.get("hash")
-        
-        # Evitar duplicados
-        if tx_hash in processed_txs:
-            continue
-        
-        # Solo transacciones entrantes (to = tu wallet)
-        if tx.get("to", "").lower() != DEPOSIT_WALLET.lower():
-            continue
-        
-        # Solo USDT
-        if tx.get("contractAddress", "").lower() != USDT_CONTRACT.lower():
-            continue
-        
-        # Convertir valor (18 decimales para BEP20)
-        try:
-            value = int(tx.get("value", "0")) / (10 ** 18)
-        except (ValueError, TypeError):
-            continue
-        
-        # Solo depósitos del monto esperado (con tolerancia)
-        if abs(value - ENTRY_PRICE) > 0.01:
-            continue
-        
-        # Confirmaciones mínimas (evita transacciones no confirmadas)
-        try:
-            confirmations = int(tx.get("confirmations", "0"))
-        except (ValueError, TypeError):
-            confirmations = 0
-        
-        if confirmations < 3:
-            continue
-        
-        # TX válida
-        new_deposits.append({
-            "tx_hash": tx_hash,
-            "from": tx.get("from", "").lower(),
-            "amount": value,
-            "timestamp": int(tx.get("timeStamp", "0")),
-        })
-        
-        processed_txs.add(tx_hash)
+    except Exception as e:
+        print(f"❌ Error consultando bloques: {e}")
+        return []
     
     return new_deposits
 
@@ -124,3 +177,13 @@ def check_new_deposits():
 def get_tx_url(tx_hash):
     """Devuelve la URL de BscScan para una transacción"""
     return f"https://bscscan.com/tx/{tx_hash}"
+
+
+def check_connection():
+    """Verifica que haya conexión a BSC"""
+    w3 = get_web3()
+    
+    if not w3:
+        return False
+    
+    return w3.is_connected()
