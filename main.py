@@ -10,11 +10,13 @@ from config import BOT_TOKEN, BSCSCAN_API_KEY
 from database import init_db
 from handlers import (
     start, menu_command, admin_command,
-    button_handler, handle_photo, handle_text
+    button_handler, handle_text
 )
 from admin import (
-    broadcast_command, ban_command, user_info_command,
-    export_db_command
+    broadcast_command, ban_command, unban_command,
+    user_info_command, export_db_command,
+    give_premium_command, remove_premium_command,
+    add_balance_command, stats_command
 )
 from monitor import monitor_deposits
 
@@ -23,9 +25,9 @@ async def post_init(app):
     """Inicia el monitor después del arranque"""
     if BSCSCAN_API_KEY:
         asyncio.create_task(monitor_deposits(app.bot))
-        print("👁️ Monitor de depósitos automáticos ACTIVADO")
+        print("👁️ Monitor de depósitos ACTIVADO")
     else:
-        print("⚠️ Monitor de depósitos DESACTIVADO (falta BSCSCAN_API_KEY)")
+        print("⚠️ Monitor DESACTIVADO (falta BSCSCAN_API_KEY)")
 
 
 def main():
@@ -42,16 +44,20 @@ def main():
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("menu", menu_command))
     app.add_handler(CommandHandler("admin", admin_command))
+    app.add_handler(CommandHandler("stats", stats_command))
     app.add_handler(CommandHandler("broadcast", broadcast_command))
     app.add_handler(CommandHandler("ban", ban_command))
+    app.add_handler(CommandHandler("unban", unban_command))
     app.add_handler(CommandHandler("userinfo", user_info_command))
     app.add_handler(CommandHandler("exportdb", export_db_command))
+    app.add_handler(CommandHandler("givepremium", give_premium_command))
+    app.add_handler(CommandHandler("removepremium", remove_premium_command))
+    app.add_handler(CommandHandler("addbalance", add_balance_command))
     
     # ============ CALLBACKS ============
     app.add_handler(CallbackQueryHandler(button_handler))
     
     # ============ MENSAJES ============
-    app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
     
     print("✅ Bot iniciado correctamente")
