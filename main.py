@@ -6,7 +6,7 @@ from telegram.ext import (
     Application, CommandHandler, CallbackQueryHandler,
     MessageHandler, filters
 )
-from config import BOT_TOKEN, BSCSCAN_API_KEY
+from config import BOT_TOKEN
 from database import init_db
 from handlers import (
     start, menu_command, admin_command,
@@ -23,11 +23,8 @@ from monitor import monitor_deposits
 
 async def post_init(app):
     """Inicia el monitor después del arranque"""
-    if BSCSCAN_API_KEY:
-        asyncio.create_task(monitor_deposits(app.bot))
-        print("👁️ Monitor de depósitos ACTIVADO")
-    else:
-        print("⚠️ Monitor DESACTIVADO (falta BSCSCAN_API_KEY)")
+    asyncio.create_task(monitor_deposits(app.bot))
+    print("👁️ Monitor de depósitos ACTIVADO")
 
 
 def main():
