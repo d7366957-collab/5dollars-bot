@@ -5,7 +5,6 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 
 def main_menu_keyboard():
-    """Menú principal"""
     return InlineKeyboardMarkup([
         [
             InlineKeyboardButton("🔗 Mi link", callback_data="my_link"),
@@ -27,21 +26,22 @@ def main_menu_keyboard():
 
 
 def welcome_keyboard():
-    """Bienvenida"""
     return InlineKeyboardMarkup([
         [
             InlineKeyboardButton("🚀 EMPEZAR", callback_data="start_deposit"),
             InlineKeyboardButton("📖 CÓMO FUNCIONA", callback_data="how_it_works")
         ],
         [
-            InlineKeyboardButton("🏆 RANKING", callback_data="ranking"),
+            InlineKeyboardButton("🔗 MI LINK", callback_data="my_link"),
+            InlineKeyboardButton("🏆 RANKING", callback_data="ranking")
+        ],
+        [
             InlineKeyboardButton("💬 SOPORTE", callback_data="support")
         ]
     ])
 
 
 def how_it_works_keyboard():
-    """Cómo funciona"""
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("🚀 EMPEZAR", callback_data="start_deposit")],
         [InlineKeyboardButton("⬅️ ATRÁS", callback_data="back")]
@@ -49,7 +49,6 @@ def how_it_works_keyboard():
 
 
 def deposit_keyboard():
-    """Depósito"""
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("🔗 VINCULAR MI WALLET", callback_data="setup_wallet")],
         [
@@ -61,7 +60,6 @@ def deposit_keyboard():
 
 
 def wallet_setup_keyboard():
-    """Vincular wallet"""
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("🔗 VINCULAR MI WALLET", callback_data="setup_wallet")],
         [InlineKeyboardButton("⬅️ ATRÁS", callback_data="back")]
@@ -69,7 +67,6 @@ def wallet_setup_keyboard():
 
 
 def wallet_linked_keyboard():
-    """Wallet vinculada"""
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("📋 COPIAR DIRECCIÓN", callback_data="copy_address")],
         [InlineKeyboardButton("🏠 MENÚ", callback_data="menu")]
@@ -77,7 +74,6 @@ def wallet_linked_keyboard():
 
 
 def after_premium_keyboard():
-    """Después de activar premium"""
     return InlineKeyboardMarkup([
         [
             InlineKeyboardButton("📤 COMPARTIR", callback_data="share_link"),
@@ -88,7 +84,6 @@ def after_premium_keyboard():
 
 
 def withdrawal_keyboard(balance, is_premium):
-    """Retiro"""
     buttons = []
     
     if is_premium:
@@ -111,7 +106,6 @@ def withdrawal_keyboard(balance, is_premium):
 
 
 def activate_premium_keyboard():
-    """Activar premium (para gratis)"""
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("🚀 ACTIVAR PREMIUM", callback_data="start_deposit")],
         [InlineKeyboardButton("⬅️ ATRÁS", callback_data="menu")]
@@ -119,14 +113,12 @@ def activate_premium_keyboard():
 
 
 def back_keyboard():
-    """Botón atrás"""
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("🏠 MENÚ", callback_data="menu")]
     ])
 
 
 def ranking_keyboard():
-    """Ranking"""
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("🔄 ACTUALIZAR", callback_data="ranking")],
         [InlineKeyboardButton("🏠 MENÚ", callback_data="menu")]
@@ -134,8 +126,8 @@ def ranking_keyboard():
 
 
 def support_keyboard():
-    """Soporte"""
     return InlineKeyboardMarkup([
+        [InlineKeyboardButton("🆔 VER MI ID", callback_data="show_id")],
         [InlineKeyboardButton("💬 CONTACTAR", url="https://t.me/YordanSoporte")],
         [InlineKeyboardButton("🏠 MENÚ", callback_data="menu")]
     ])
@@ -144,7 +136,6 @@ def support_keyboard():
 # ============ BOTONES DE ADMIN ============
 
 def admin_panel_keyboard():
-    """Panel de admin"""
     return InlineKeyboardMarkup([
         [
             InlineKeyboardButton("📥 Depósitos", callback_data="admin_deposits"),
@@ -162,7 +153,6 @@ def admin_panel_keyboard():
 
 
 def admin_withdrawal_keyboard(ticket):
-    """Admin - retiro pendiente"""
     return InlineKeyboardMarkup([
         [
             InlineKeyboardButton("✅ PAGADO", callback_data=f"approve_wd_{ticket}"),
@@ -172,7 +162,6 @@ def admin_withdrawal_keyboard(ticket):
 
 
 def admin_deposit_keyboard(ticket):
-    """Admin - depósito pendiente"""
     return InlineKeyboardMarkup([
         [
             InlineKeyboardButton("✅ APROBAR", callback_data=f"approve_dep_{ticket}"),
