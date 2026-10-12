@@ -59,16 +59,19 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("❌ Estás baneado del sistema.")
             return
         
+        # ✅ SIEMPRE mostrar bienvenida si no es premium
         if existing['has_deposited']:
+            # Premium → menú principal
             await update.message.reply_text(
                 main_menu_message(existing),
                 reply_markup=main_menu_keyboard(),
                 parse_mode="Markdown"
             )
         else:
+            # Gratis → bienvenida
             await update.message.reply_text(
-                deposit_message(),
-                reply_markup=deposit_keyboard(),
+                welcome_message(),
+                reply_markup=welcome_keyboard(),
                 parse_mode="Markdown"
             )
         return
@@ -100,6 +103,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             except Exception as e:
                 print(f"Error notificando: {e}")
     
+    # Usuario nuevo → bienvenida
     await update.message.reply_text(
         welcome_message(),
         reply_markup=welcome_keyboard(),
@@ -115,11 +119,18 @@ async def menu_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await start(update, context)
         return
     
-    await update.message.reply_text(
-        main_menu_message(user),
-        reply_markup=main_menu_keyboard(),
-        parse_mode="Markdown"
-    )
+    if user['has_deposited']:
+        await update.message.reply_text(
+            main_menu_message(user),
+            reply_markup=main_menu_keyboard(),
+            parse_mode="Markdown"
+        )
+    else:
+        await update.message.reply_text(
+            welcome_message(),
+            reply_markup=welcome_keyboard(),
+            parse_mode="Markdown"
+        )
 
 
 # ============ COMANDO /admin ============
@@ -177,12 +188,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.edit_message_text(
                 main_menu_message(user),
                 reply_markup=main_menu_keyboard(),
-                parse_mode="Markdown"
-            )
-        elif user:
-            await query.edit_message_text(
-                deposit_message(),
-                reply_markup=deposit_keyboard(),
                 parse_mode="Markdown"
             )
         else:
