@@ -35,7 +35,7 @@ from messages import (
     my_link_message, my_referrals_message, withdraw_message,
     wallet_request_message, withdrawal_created_message,
     bonuses_message, bonus_unlocked_message, ranking_message,
-    help_message, support_message,
+    help_message, support_message, get_id_message,
     new_referral_notification, referral_premium_notification,
     withdrawal_paid_notification
 )
@@ -59,16 +59,13 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("❌ Estás baneado del sistema.")
             return
         
-        # ✅ SIEMPRE mostrar bienvenida si no es premium
         if existing['has_deposited']:
-            # Premium → menú principal
             await update.message.reply_text(
                 main_menu_message(existing),
                 reply_markup=main_menu_keyboard(),
                 parse_mode="Markdown"
             )
         else:
-            # Gratis → bienvenida
             await update.message.reply_text(
                 welcome_message(),
                 reply_markup=welcome_keyboard(),
@@ -103,7 +100,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             except Exception as e:
                 print(f"Error notificando: {e}")
     
-    # Usuario nuevo → bienvenida
     await update.message.reply_text(
         welcome_message(),
         reply_markup=welcome_keyboard(),
@@ -131,6 +127,19 @@ async def menu_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=welcome_keyboard(),
             parse_mode="Markdown"
         )
+
+
+# ============ COMANDO /getid ============
+
+async def get_id_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Muestra el ID del usuario"""
+    user_id = update.effective_user.id
+    username = update.effective_user.username
+    
+    await update.message.reply_text(
+        get_id_message(user_id, username),
+        parse_mode="Markdown"
+    )
 
 
 # ============ COMANDO /admin ============
@@ -339,6 +348,13 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode="Markdown"
         )
     
+    elif data == "show_id":
+        await query.edit_message_text(
+            get_id_message(user_id, query.from_user.username),
+            reply_markup=back_keyboard(),
+            parse_mode="Markdown"
+        )
+    
     # ============ ADMIN ============
     
     elif data == "admin_withdrawals":
@@ -485,7 +501,6 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode="Markdown"
         )
         
-        # Notificar al admin
         try:
             await context.bot.send_message(
                 chat_id=ADMIN_ID,
