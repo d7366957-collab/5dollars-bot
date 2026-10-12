@@ -9,7 +9,7 @@ from telegram.ext import (
 from config import BOT_TOKEN
 from database import init_db
 from handlers import (
-    start, menu_command, admin_command,
+    start, menu_command, admin_command, get_id_command,
     button_handler, handle_text
 )
 from admin import (
@@ -40,6 +40,7 @@ def main():
     # ============ COMANDOS ============
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("menu", menu_command))
+    app.add_handler(CommandHandler("getid", get_id_command))
     app.add_handler(CommandHandler("admin", admin_command))
     app.add_handler(CommandHandler("stats", stats_command))
     app.add_handler(CommandHandler("broadcast", broadcast_command))
