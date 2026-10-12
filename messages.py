@@ -31,6 +31,12 @@ def welcome_message():
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+⚠️ *IMPORTANTE:*
+Solo el plan premium gana *${REFERRAL_COMMISSION:.2f}*
+por cada referido que adquiera premium.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
 🔗 *Tu link. Tu red. Tus ganancias.*
 
 *El momento es ahora.*
@@ -51,6 +57,8 @@ def how_it_works_message():
 2️⃣ Recibes tu link único
 3️⃣ Cada amigo que entra → *+${REFERRAL_REGISTRATION_FEE:.2f}*
 4️⃣ Retiras desde *${MIN_WITHDRAWAL_FREE:.0f}*
+
+⚠️ *NO ganas ${REFERRAL_COMMISSION:.2f}* por referido premium
 
 💎 *PLAN PREMIUM* — ${ENTRY_PRICE:.0f} único
 
@@ -214,7 +222,6 @@ def main_menu_message(user):
     else:
         comision_texto = f"${REFERRAL_REGISTRATION_FEE:.2f} por referido"
     
-    # Barra de progreso para bono de 10
     progress = int((user['total_premium'] / 10) * 100) if user['total_premium'] < 10 else 100
     filled = int((progress / 100) * 10)
     bar = "▓" * filled + "░" * (10 - filled)
@@ -254,6 +261,17 @@ def my_link_message(user, bot_username):
     link = f"https://t.me/{bot_username}?start={user['referral_code']}"
     plan = "💎 PREMIUM" if user['has_deposited'] else "🎁 GRATIS"
     
+    if user['has_deposited']:
+        comision_info = f"""
+✅ ${REFERRAL_REGISTRATION_FEE:.2f} por registro
+✅ ${REFERRAL_COMMISSION:.2f} por referido premium
+"""
+    else:
+        comision_info = f"""
+✅ ${REFERRAL_REGISTRATION_FEE:.2f} por registro
+❌ NO ganas ${REFERRAL_COMMISSION:.2f} (solo premium)
+"""
+    
     return f"""
 🔗 *TU LINK*
 
@@ -264,6 +282,11 @@ def my_link_message(user, bot_username):
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 {plan}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+💸 *TUS COMISIONES:*
+{comision_info}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -565,6 +588,7 @@ def help_message():
 🎁 *PLAN GRATIS*
 → ${REFERRAL_REGISTRATION_FEE:.2f} por amigo
 → Retira desde ${MIN_WITHDRAWAL_FREE:.0f}
+→ ❌ NO ganas ${REFERRAL_COMMISSION:.2f}
 
 💎 *PLAN PREMIUM*
 → ${REFERRAL_REGISTRATION_FEE:.2f} por amigo
@@ -581,16 +605,18 @@ def help_message():
 🪙 *¿Qué red?*
 → BEP20 (BSC)
 
-💰 *¿Cuánto por referido?*
-→ ${REFERRAL_REGISTRATION_FEE:.2f} por registro
-→ +${REFERRAL_COMMISSION:.2f} si adquiere premium
-
 ⏳ *¿Por qué no gano ${REFERRAL_COMMISSION:.2f}?*
 → Solo premium gana esa comisión
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 💬 *Soporte:* @YordanSoporte
+
+📌 *¿Necesitas tu ID?*
+→ Envía /getid
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
 ⏰ Respuesta en menos de 6h
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -616,10 +642,31 @@ Si tu depósito no se acreditó:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+📌 *¿Necesitas tu ID?*
+→ Envía /getid
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
 📩 *Contacto:*
 @YordanSoporte
 
 ⏰ Respuesta en menos de 6h
+"""
+
+
+def get_id_message(user_id, username):
+    return f"""
+🆔 *TU ID DE TELEGRAM*
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+👤 Username: @{username or 'N/A'}
+🆔 ID: `{user_id}`
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+💡 _Envía este ID al soporte_
+_si tienes algún problema._
 """
 
 
